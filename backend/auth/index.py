@@ -1,5 +1,5 @@
 """
-Авторизация казино: регистрация, вход, получение профиля, обновление баланса.
+Авторизация казино: регистрация, вход, получение профиля, обновление баланса и удачи.
 Действие передаётся в поле action тела запроса.
 """
 import json
@@ -31,6 +31,9 @@ def ok(data: dict, status: int = 200):
 def err(msg: str, status: int = 400):
     return {"statusCode": status, "headers": {**CORS, "Content-Type": "application/json"}, "body": json.dumps({"error": msg})}
 
+def user_row_to_dict(row):
+    return {"id": row[0], "username": row[1], "balance": row[2], "luck_multiplier": float(row[3])}
+
 def handler(event: dict, context) -> dict:
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
@@ -59,14 +62,14 @@ def handler(event: dict, context) -> dict:
             conn.close()
             return err("Логин уже занят")
         cur.execute(
-            f"INSERT INTO {SCHEMA}.users (username, password_hash) VALUES ('{username}', '{pw_hash}') RETURNING id, balance"
+            f"INSERT INTO {SCHEMA}.users (username, password_hash) VALUES ('{username}', '{pw_hash}') RETURNING id, balance, luck_multiplier"
         )
         row = cur.fetchone()
-        user_id, balance = row
+        user_id, balance, luck = row
         cur.execute(f"INSERT INTO {SCHEMA}.sessions (user_id, token) VALUES ({user_id}, '{token}')")
         conn.commit()
         conn.close()
-        return ok({"token": token, "user": {"id": user_id, "username": username, "balance": balance}}, 201)
+        return ok({"token": token, "user": {"id": user_id, "username": username, "balance": balance, "luck_multiplier": float(luck)}}, 201)
 
     # Вход
     if action == "login":
@@ -76,16 +79,16 @@ def handler(event: dict, context) -> dict:
         token = make_token()
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(f"SELECT id, balance FROM {SCHEMA}.users WHERE username = '{username}' AND password_hash = '{pw_hash}'")
+        cur.execute(f"SELECT id, balance, luck_multiplier FROM {SCHEMA}.users WHERE username = '{username}' AND password_hash = '{pw_hash}'")
         row = cur.fetchone()
         if not row:
             conn.close()
             return err("Неверный логин или пароль", 401)
-        user_id, balance = row
+        user_id, balance, luck = row
         cur.execute(f"INSERT INTO {SCHEMA}.sessions (user_id, token) VALUES ({user_id}, '{token}')")
         conn.commit()
         conn.close()
-        return ok({"token": token, "user": {"id": user_id, "username": username, "balance": balance}})
+        return ok({"token": token, "user": {"id": user_id, "username": username, "balance": balance, "luck_multiplier": float(luck)}})
 
     # Проверить токен / получить профиль
     if action == "me":
@@ -95,7 +98,7 @@ def handler(event: dict, context) -> dict:
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            f"SELECT u.id, u.username, u.balance FROM {SCHEMA}.users u "
+            f"SELECT u.id, u.username, u.balance, u.luck_multiplier FROM {SCHEMA}.users u "
             f"JOIN {SCHEMA}.sessions s ON s.user_id = u.id "
             f"WHERE s.token = '{token}'"
         )
@@ -103,28 +106,30 @@ def handler(event: dict, context) -> dict:
         conn.close()
         if not row:
             return err("Не авторизован", 401)
-        return ok({"user": {"id": row[0], "username": row[1], "balance": row[2]}})
+        return ok({"user": user_row_to_dict(row)})
 
-    # Сохранить баланс
+    # Сохранить баланс (и сбросить удачу после спина)
     if action == "update_balance":
         token = body.get("token") or ""
         new_balance = body.get("balance")
+        reset_luck = body.get("reset_luck", False)
         if not token:
             return err("Не авторизован", 401)
         if new_balance is None or int(new_balance) < 0:
             return err("Некорректный баланс")
+        luck_sql = ", luck_multiplier = 1.0" if reset_luck else ""
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            f"UPDATE {SCHEMA}.users SET balance = {int(new_balance)} "
+            f"UPDATE {SCHEMA}.users SET balance = {int(new_balance)}{luck_sql} "
             f"WHERE id = (SELECT user_id FROM {SCHEMA}.sessions WHERE token = '{token}' LIMIT 1) "
-            f"RETURNING id, username, balance"
+            f"RETURNING id, username, balance, luck_multiplier"
         )
         row = cur.fetchone()
         conn.commit()
         conn.close()
         if not row:
             return err("Не авторизован", 401)
-        return ok({"user": {"id": row[0], "username": row[1], "balance": row[2]}})
+        return ok({"user": user_row_to_dict(row)})
 
     return err("Неизвестное действие", 400)

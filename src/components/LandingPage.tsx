@@ -3,7 +3,9 @@ import Icon from "@/components/ui/icon";
 
 interface Props {
   username?: string;
+  isAdmin?: boolean;
   onEnter: () => void;
+  onAdmin?: () => void;
   onLogout: () => void;
 }
 
@@ -16,7 +18,7 @@ const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   size: i % 4 === 0 ? 8 : 5,
 }));
 
-export default function LandingPage({ username, onEnter, onLogout }: Props) {
+export default function LandingPage({ username, isAdmin, onEnter, onAdmin, onLogout }: Props) {
   const [hovering, setHovering] = useState(false);
 
   return (
@@ -54,13 +56,25 @@ export default function LandingPage({ username, onEnter, onLogout }: Props) {
           <span className="font-casino text-xs tracking-[0.4em] text-yellow-400 uppercase">Est. 2024</span>
           <div style={{ width: 40, height: 1, background: "linear-gradient(to left, transparent, #f5c842)" }} />
         </div>
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-2 font-casino text-xs tracking-widest text-yellow-800 hover:text-yellow-500 transition-colors uppercase"
-        >
-          <Icon name="LogOut" size={13} />
-          Выйти
-        </button>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <button
+              onClick={onAdmin}
+              className="flex items-center gap-1.5 font-casino text-xs tracking-widest uppercase transition-colors px-3 py-1.5 rounded"
+              style={{ background: "rgba(200,20,10,0.15)", border: "1px solid #7f1d1d", color: "#fca5a5" }}
+            >
+              <Icon name="ShieldCheck" size={13} />
+              Админ
+            </button>
+          )}
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 font-casino text-xs tracking-widest text-yellow-800 hover:text-yellow-500 transition-colors uppercase"
+          >
+            <Icon name="LogOut" size={13} />
+            Выйти
+          </button>
+        </div>
       </div>
 
       {/* Main content */}

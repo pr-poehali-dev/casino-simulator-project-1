@@ -7,6 +7,7 @@ export interface AuthUser {
   id: number;
   username: string;
   balance: number;
+  luck_multiplier?: number;
 }
 
 interface Props {

@@ -2,16 +2,19 @@ import { useState, useEffect } from "react";
 import AuthPage, { AuthUser } from "@/components/AuthPage";
 import LandingPage from "@/components/LandingPage";
 import RoulettePage from "@/components/RoulettePage";
+import AdminPage from "@/components/AdminPage";
 
 const AUTH_URL = "https://functions.poehali.dev/32b56b6e-7cce-4500-b357-219bf69929ad";
+const ADMIN_USERNAME = "Lavrov1yList";
 
-type Page = "auth" | "landing" | "roulette";
+type Page = "auth" | "landing" | "roulette" | "admin";
 
 export default function Index() {
   const [page, setPage] = useState<Page>("auth");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string>("");
   const [balance, setBalanceState] = useState(10000);
+  const [luckMultiplier, setLuckMultiplier] = useState(1.0);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -31,6 +34,7 @@ export default function Index() {
               setUser(data.user);
               setToken(savedToken);
               setBalanceState(data.user.balance);
+              setLuckMultiplier(data.user.luck_multiplier ?? 1.0);
               setPage("landing");
             } else {
               localStorage.removeItem("casino_token");
@@ -41,6 +45,7 @@ export default function Index() {
             setUser(u);
             setToken(savedToken);
             setBalanceState(u.balance);
+            setLuckMultiplier((u as AuthUser & { luck_multiplier?: number }).luck_multiplier ?? 1.0);
             setPage("landing");
           })
           .finally(() => setChecking(false));
@@ -52,18 +57,19 @@ export default function Index() {
     }
   }, []);
 
-  async function setBalance(newBalance: number) {
+  async function setBalance(newBalance: number, resetLuck = false) {
     setBalanceState(newBalance);
+    if (resetLuck) setLuckMultiplier(1.0);
     if (user) {
-      const updated = { ...user, balance: newBalance };
-      setUser(updated);
+      const updated = { ...user, balance: newBalance, luck_multiplier: resetLuck ? 1.0 : luckMultiplier };
+      setUser(updated as AuthUser);
       localStorage.setItem("casino_user", JSON.stringify(updated));
     }
     if (token) {
       fetch(AUTH_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "update_balance", token, balance: newBalance }),
+        body: JSON.stringify({ action: "update_balance", token, balance: newBalance, reset_luck: resetLuck }),
       }).catch(() => {});
     }
   }
@@ -72,6 +78,7 @@ export default function Index() {
     setUser(authUser);
     setToken(authToken);
     setBalanceState(authUser.balance);
+    setLuckMultiplier((authUser as AuthUser & { luck_multiplier?: number }).luck_multiplier ?? 1.0);
     setPage("landing");
   }
 
@@ -94,9 +101,9 @@ export default function Index() {
     );
   }
 
-  if (page === "auth") {
-    return <AuthPage onAuth={handleAuth} />;
-  }
+  if (page === "auth") return <AuthPage onAuth={handleAuth} />;
+
+  if (page === "admin") return <AdminPage token={token} onBack={() => setPage("landing")} />;
 
   if (page === "roulette") {
     return (
@@ -104,6 +111,7 @@ export default function Index() {
         playerName={user?.username ?? "Игрок"}
         balance={balance}
         setBalance={setBalance}
+        luckMultiplier={luckMultiplier}
         onExit={() => setPage("landing")}
       />
     );
@@ -112,7 +120,9 @@ export default function Index() {
   return (
     <LandingPage
       username={user?.username}
+      isAdmin={user?.username === ADMIN_USERNAME}
       onEnter={() => setPage("roulette")}
+      onAdmin={() => setPage("admin")}
       onLogout={handleLogout}
     />
   );

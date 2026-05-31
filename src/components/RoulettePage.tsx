@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
 interface Props {
   playerName: string;
   balance: number;
-  setBalance: (b: number) => void;
+  setBalance: (b: number, resetLuck?: boolean) => void;
+  luckMultiplier?: number;
   onExit: () => void;
 }
 
@@ -167,9 +168,7 @@ function RouletteWheel({ spinning, result }: { spinning: boolean; result: number
   );
 }
 
-const NUMBERS_GRID = Array.from({ length: 36 }, (_, i) => i + 1);
-
-export default function RoulettePage({ playerName, balance, setBalance, onExit }: Props) {
+export default function RoulettePage({ playerName, balance, setBalance, luckMultiplier = 1.0, onExit }: Props) {
   const [bets, setBets] = useState<Record<string, Bet>>({});
   const [selectedChip, setSelectedChip] = useState(100);
   const [spinning, setSpinning] = useState(false);
@@ -200,6 +199,36 @@ export default function RoulettePage({ playerName, balance, setBalance, onExit }
     setMessage(null);
   }
 
+  function spinWithLuck(): number {
+    // Получаем все числа, на которые есть ставки
+    const betKeys = Object.keys(bets);
+    const winningNumbers: number[] = [];
+    for (let n = 0; n <= 36; n++) {
+      const wouldWin = betKeys.some((k) => isWin(bets[k].betType, n));
+      if (wouldWin) winningNumbers.push(n);
+    }
+    const losingNumbers = Array.from({ length: 37 }, (_, i) => i).filter(n => !winningNumbers.includes(n));
+
+    if (luckMultiplier === 1.0 || winningNumbers.length === 0 || losingNumbers.length === 0) {
+      return Math.floor(Math.random() * 37);
+    }
+
+    // Взвешенный выбор: выигрышные числа получают вес luckMultiplier, проигрышные — 1
+    const winWeight = Math.max(0.01, luckMultiplier);
+    const totalWeight = winningNumbers.length * winWeight + losingNumbers.length * 1;
+    let rand = Math.random() * totalWeight;
+
+    for (const n of winningNumbers) {
+      rand -= winWeight;
+      if (rand <= 0) return n;
+    }
+    for (const n of losingNumbers) {
+      rand -= 1;
+      if (rand <= 0) return n;
+    }
+    return Math.floor(Math.random() * 37);
+  }
+
   function spin() {
     if (spinning || Object.keys(bets).length === 0) return;
 
@@ -208,7 +237,7 @@ export default function RoulettePage({ playerName, balance, setBalance, onExit }
     setResult(null);
 
     setTimeout(() => {
-      const num = Math.floor(Math.random() * 37);
+      const num = spinWithLuck();
       setResult(num);
       setSpinning(false);
 
@@ -223,9 +252,10 @@ export default function RoulettePage({ playerName, balance, setBalance, onExit }
       });
 
       if (winnings > 0) {
-        setBalance(balance + winnings);
+        setBalance(balance + winnings, true);
         setMessage({ text: `Выпало ${num}! Выигрыш: +${winnings.toLocaleString()} фишек 🎉`, win: true });
       } else {
+        setBalance(balance, true);
         setMessage({ text: `Выпало ${num}. Увы, не повезло...`, win: false });
       }
 
@@ -263,6 +293,18 @@ export default function RoulettePage({ playerName, balance, setBalance, onExit }
         </div>
 
         <div className="flex items-center gap-3">
+          {luckMultiplier !== 1.0 && (
+            <div
+              className="px-2 py-1 rounded font-casino text-xs font-bold animate-pulse"
+              style={{
+                background: luckMultiplier > 1 ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                border: `1px solid ${luckMultiplier > 1 ? "#22c55e55" : "#ef444455"}`,
+                color: luckMultiplier > 1 ? "#86efac" : "#fca5a5",
+              }}
+            >
+              {luckMultiplier > 1 ? `🍀 x${luckMultiplier}` : `🔻 x${luckMultiplier}`}
+            </div>
+          )}
           <div className="text-right">
             <p className="font-casino text-xs text-yellow-700 tracking-widest uppercase">Баланс</p>
             <p className="font-casino text-lg text-yellow-400 font-semibold">
