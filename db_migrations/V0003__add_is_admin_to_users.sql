@@ -1,0 +1,2 @@
+ALTER TABLE t_p89119388_casino_simulator_pro.users
+  ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;

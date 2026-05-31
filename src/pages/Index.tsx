@@ -5,7 +5,7 @@ import RoulettePage from "@/components/RoulettePage";
 import AdminPage from "@/components/AdminPage";
 
 const AUTH_URL = "https://functions.poehali.dev/32b56b6e-7cce-4500-b357-219bf69929ad";
-const ADMIN_USERNAME = "Lavrov1yList";
+const SUPER_ADMIN = "Lavrov1yList";
 
 type Page = "auth" | "landing" | "roulette" | "admin";
 
@@ -103,7 +103,7 @@ export default function Index() {
 
   if (page === "auth") return <AuthPage onAuth={handleAuth} />;
 
-  if (page === "admin") return <AdminPage token={token} onBack={() => setPage("landing")} />;
+  if (page === "admin") return <AdminPage token={token} callerUsername={user?.username ?? ""} onBack={() => setPage("landing")} />;
 
   if (page === "roulette") {
     return (
@@ -120,7 +120,7 @@ export default function Index() {
   return (
     <LandingPage
       username={user?.username}
-      isAdmin={user?.username === ADMIN_USERNAME}
+      isAdmin={user?.username === SUPER_ADMIN || !!(user as AuthUser & { is_admin?: boolean })?.is_admin}
       onEnter={() => setPage("roulette")}
       onAdmin={() => setPage("admin")}
       onLogout={handleLogout}

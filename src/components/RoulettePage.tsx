@@ -24,7 +24,7 @@ function getColor(n: number): "red" | "black" | "green" {
   return RED_NUMBERS.has(n) ? "red" : "black";
 }
 
-const CHIP_VALUES = [50, 100, 500, 1000, 5000];
+const CHIP_VALUES = [100, 500, 1000, 5000, 10000, 50000, 100000];
 
 type BetType =
   | { type: "number"; value: number }
@@ -264,11 +264,13 @@ export default function RoulettePage({ playerName, balance, setBalance, luckMult
   }
 
   const chipColors: Record<number, string> = {
-    50: "#3b82f6",
     100: "#22c55e",
-    500: "#f59e0b",
-    1000: "#ef4444",
-    5000: "#a855f7",
+    500: "#3b82f6",
+    1000: "#f59e0b",
+    5000: "#ef4444",
+    10000: "#a855f7",
+    50000: "#ec4899",
+    100000: "#f5c842",
   };
 
   return (
@@ -404,7 +406,7 @@ export default function RoulettePage({ playerName, balance, setBalance, luckMult
                     boxShadow: selectedChip === v ? `0 0 15px ${chipColors[v]}88` : "none",
                   }}
                 >
-                  {v >= 1000 ? `${v / 1000}К` : v}
+                  {v >= 1000000 ? `${v / 1000000}М` : v >= 1000 ? `${v / 1000}К` : v}
                 </button>
               ))}
             </div>
