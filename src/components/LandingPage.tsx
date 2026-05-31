@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
 interface Props {
-  onEnter: (name: string) => void;
+  username?: string;
+  onEnter: () => void;
+  onLogout: () => void;
 }
 
 const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
@@ -14,15 +16,8 @@ const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   size: i % 4 === 0 ? 8 : 5,
 }));
 
-export default function LandingPage({ onEnter }: Props) {
-  const [name, setName] = useState("");
-  const [focused, setFocused] = useState(false);
+export default function LandingPage({ username, onEnter, onLogout }: Props) {
   const [hovering, setHovering] = useState(false);
-
-  const handleEnter = () => {
-    const playerName = name.trim() || "Игрок";
-    onEnter(playerName);
-  };
 
   return (
     <div
@@ -53,12 +48,19 @@ export default function LandingPage({ onEnter }: Props) {
         style={{ borderLeft: "1px solid #f5c842", borderTop: "1px solid #f5c842", borderRadius: "100% 0 0 0" }} />
 
       {/* Top bar */}
-      <div className="absolute top-6 left-0 right-0 flex justify-center">
-        <div className="flex items-center gap-3 opacity-50">
-          <div style={{ width: 60, height: 1, background: "linear-gradient(to right, transparent, #f5c842)" }} />
+      <div className="absolute top-6 left-0 right-0 flex justify-between items-center px-6">
+        <div className="flex items-center gap-3 opacity-40">
+          <div style={{ width: 40, height: 1, background: "linear-gradient(to right, transparent, #f5c842)" }} />
           <span className="font-casino text-xs tracking-[0.4em] text-yellow-400 uppercase">Est. 2024</span>
-          <div style={{ width: 60, height: 1, background: "linear-gradient(to left, transparent, #f5c842)" }} />
+          <div style={{ width: 40, height: 1, background: "linear-gradient(to left, transparent, #f5c842)" }} />
         </div>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-2 font-casino text-xs tracking-widest text-yellow-800 hover:text-yellow-500 transition-colors uppercase"
+        >
+          <Icon name="LogOut" size={13} />
+          Выйти
+        </button>
       </div>
 
       {/* Main content */}
@@ -89,40 +91,25 @@ export default function LandingPage({ onEnter }: Props) {
           <div style={{ width: 80, height: 1, background: "linear-gradient(to left, transparent, #c8940a)" }} />
         </div>
 
+        {/* Welcome */}
+        {username && (
+          <div className="animate-fade-in-up-3 mb-6">
+            <p className="font-casino text-sm tracking-widest text-yellow-600 uppercase">
+              Добро пожаловать,{" "}
+              <span className="text-yellow-300 font-bold">{username}</span>
+            </p>
+          </div>
+        )}
+
         {/* Subtitle */}
         <p className="animate-fade-in-up-3 font-body text-sm tracking-widest text-yellow-200 opacity-60 uppercase mb-10">
           Симулятор казино · Рулетка
         </p>
 
-        {/* Input */}
-        <div className="animate-fade-in-up-4 w-full max-w-sm mb-4">
-          <div
-            className="relative"
-            style={{
-              border: `1px solid ${focused ? "#f5c842" : "#3a2a00"}`,
-              borderRadius: 4,
-              transition: "border-color 0.3s",
-              boxShadow: focused ? "0 0 20px rgba(245,200,66,0.2)" : "none",
-            }}
-          >
-            <Icon name="User" size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-600" />
-            <input
-              type="text"
-              placeholder="Ваше имя (необязательно)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              onKeyDown={(e) => e.key === "Enter" && handleEnter()}
-              className="w-full bg-transparent py-4 pl-11 pr-4 font-casino text-sm tracking-wider text-yellow-100 placeholder-yellow-900 outline-none"
-            />
-          </div>
-        </div>
-
         {/* CTA Button */}
         <div className="animate-fade-in-up-5 w-full max-w-sm">
           <button
-            onClick={handleEnter}
+            onClick={onEnter}
             onMouseEnter={() => setHovering(true)}
             onMouseLeave={() => setHovering(false)}
             className="relative w-full py-5 font-casino text-base tracking-[0.3em] uppercase font-semibold overflow-hidden transition-all duration-300"
@@ -139,16 +126,16 @@ export default function LandingPage({ onEnter }: Props) {
                 : "0 4px 15px rgba(200,148,10,0.3)",
             }}
           >
-            Войти в казино
+            Войти в зал
             <Icon name="ArrowRight" size={16} className="inline ml-3" />
           </button>
         </div>
 
         {/* Balance info */}
         <div className="animate-fade-in-up-5 mt-6 flex items-center gap-2 opacity-50">
-          <Icon name="Coins" size={14} className="text-yellow-500" fallback="CircleDollarSign" />
+          <Icon name="CircleDollarSign" size={14} className="text-yellow-500" />
           <span className="font-casino text-xs tracking-widest text-yellow-500">
-            Начальный баланс: 10 000 фишек
+            Баланс сохраняется между сессиями
           </span>
         </div>
       </div>
